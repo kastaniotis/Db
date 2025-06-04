@@ -12,6 +12,20 @@ readonly class DatabaseConnection {
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
+    public static function createMysql(string $host, string $dbname, string $user, string $pass): self
+    {
+        $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
+        $pdo = new PDO($dsn, $user, $pass);
+        return new self($pdo);
+    }
+
+    public static function createSqlite(string $path): self
+    {
+        $dsn = "sqlite:$path";
+        $pdo = new PDO($dsn);
+        return new self($pdo);
+    }
+
     public function query(string $sql, array $parameters = []): array
     {
         $statement = $this->pdo->prepare($sql);
