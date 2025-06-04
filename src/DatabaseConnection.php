@@ -2,7 +2,11 @@
 
 namespace Iconic\Db;
 
+use Iconic\Db\Exception\DatabaseException;
+use Iconic\Db\Exception\NoResultException;
+use Iconic\Db\Exception\TooManyResultsException;
 use PDO;
+use PDOStatement;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -148,7 +152,7 @@ readonly class DatabaseConnection {
         }
     }
 
-    private function bindParameters(\PDOStatement $statement, array $parameters, array $types): void
+    private function bindParameters(PDOStatement $statement, array $parameters, array $types): void
     {
         foreach ($parameters as $i => $value) {
             $type = $types[$i] ?? PDO::PARAM_STR;
