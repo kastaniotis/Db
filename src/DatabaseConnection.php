@@ -10,11 +10,13 @@ use PDOStatement;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-readonly class DatabaseConnection {
+readonly class DatabaseConnection
+{
     private PDO $pdo;
     private LoggerInterface $logger;
 
-    public function __construct(PDO $pdo, LoggerInterface $logger) {
+    public function __construct(PDO $pdo, LoggerInterface $logger)
+    {
         $this->pdo = $pdo;
         $this->logger = $logger;
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -47,7 +49,7 @@ readonly class DatabaseConnection {
         $statement->execute($parameters);
 
         if (stripos(trim($sql), 'insert') === 0) {
-            return (int) $this->pdo->lastInsertId();
+            return (int)$this->pdo->lastInsertId();
         }
 
         return $statement->rowCount();

@@ -60,4 +60,10 @@ class DbTest extends TestCase
         $result = $this->db->getColumn("SELECT name FROM users WHERE id = :id", ['id' => 1]);
         $this->assertEquals('Alice', $result);
     }
+
+    public function testQuery(): void
+    {
+        $result = $this->db->query('SELECT * FROM users WHERE name = :name', ['name' => 'Alice']);
+        $this->assertEquals('Alice', $result[0]['name']);
+    }
 }
