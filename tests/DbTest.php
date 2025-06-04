@@ -1,6 +1,5 @@
 <?php
 
-
 use Iconic\Db\DatabaseConnection;
 use Iconic\Db\Exception\NoResultException;
 use PHPUnit\Framework\TestCase;

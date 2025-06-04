@@ -55,30 +55,25 @@ readonly class DatabaseConnection
         return $statement->rowCount();
     }
 
-    public function getOne(string $sql, array $parameters = [], array $types = []): array
+    public function getOne(string $sql, array $parameters = []): array
     {
-        $result = $this->runFetchOne($sql, $parameters, $types);
+        $result = $this->runFetchOne($sql, $parameters);
         if ($result === null) {
             throw new NoResultException();
         }
         return $result;
     }
 
-    public function getOptionalOne(string $sql, array $parameters = [], array $types = []): ?array
+    public function getOptionalOne(string $sql, array $parameters = []): ?array
     {
-        return $this->runFetchOne($sql, $parameters, $types);
+        return $this->runFetchOne($sql, $parameters);
     }
 
-    private function runFetchOne(string $sql, array $parameters, array $types): ?array
+    private function runFetchOne(string $sql, array $parameters): ?array
     {
         try {
             $statement = $this->pdo->prepare($sql);
-            if (!empty($types)) {
-                $this->bindParameters($statement, $parameters, $types);
-                $statement->execute();
-            } else {
-                $statement->execute($parameters);
-            }
+            $statement->execute($parameters);
 
             $result = $statement->fetchAll(PDO::FETCH_ASSOC);
         } catch (Throwable $e) {
@@ -105,16 +100,11 @@ readonly class DatabaseConnection
         return $result[0];
     }
 
-    public function getMany(string $sql, array $parameters = [], array $types = []): array
+    public function getMany(string $sql, array $parameters = []): array
     {
         try {
             $statement = $this->pdo->prepare($sql);
-            if (!empty($types)) {
-                $this->bindParameters($statement, $parameters, $types);
-                $statement->execute();
-            } else {
-                $statement->execute($parameters);
-            }
+            $statement->execute($parameters);
 
             return $statement->fetchAll(PDO::FETCH_ASSOC);
         } catch (Throwable $e) {
@@ -151,14 +141,6 @@ readonly class DatabaseConnection
         } catch (Throwable $e) {
             $this->pdo->rollBack();
             throw $e;
-        }
-    }
-
-    private function bindParameters(PDOStatement $statement, array $parameters, array $types): void
-    {
-        foreach ($parameters as $i => $value) {
-            $type = $types[$i] ?? PDO::PARAM_STR;
-            $statement->bindValue($i + 1, $value, $type);
         }
     }
 
