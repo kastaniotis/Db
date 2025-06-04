@@ -1,6 +1,6 @@
 {
     "name": "iconic/db",
-    "description": "Think PDO wrapper",
+    "description": "Thin PDO wrapper",
     "type": "library",
     "license": "MIT",
     "autoload": {
