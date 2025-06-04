@@ -33,4 +33,17 @@ readonly class DatabaseConnection {
 
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function execute(string $sql, array $parameters = []): int
+    {
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($parameters);
+
+        // Simple detection of INSERT
+        if (stripos(trim($sql), 'insert') === 0) {
+            return (int) $this->pdo->lastInsertId();
+        }
+
+        return $statement->rowCount();
+    }
 }
