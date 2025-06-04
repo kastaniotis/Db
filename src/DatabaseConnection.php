@@ -124,7 +124,7 @@ readonly class DatabaseConnection {
         }
     }
 
-    public function getScalar(string $sql, array $parameters = []): mixed
+    public function getColumn(string $sql, array $parameters = []): mixed
     {
         try {
             $stmt = $this->pdo->prepare($sql);

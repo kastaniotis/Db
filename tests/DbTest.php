@@ -54,4 +54,10 @@ class DbTest extends TestCase
         $users = $this->db->getMany('SELECT * FROM users WHERE name = :name', ['name' => 'David']);
         $this->assertCount(0, $users);
     }
+
+    public function testScalar(): void
+    {
+        $result = $this->db->getColumn("SELECT name FROM users WHERE id = :id", ['id' => 1]);
+        $this->assertEquals('Alice', $result);
+    }
 }

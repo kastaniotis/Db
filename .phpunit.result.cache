@@ -1,0 +1,1 @@
+{"version":1,"defects":[],"times":{"DbTest::testGetOneReturnsRow":0.002,"DbTest::testGetOptionalOneReturnsNullWhenNoResult":0,"DbTest::testGetOneThrowsWhenNoResult":0.001,"DbTest::testExecuteReturnsInsertId":0.001,"DbTest::testTransactionRollsBackOnException":0}}
