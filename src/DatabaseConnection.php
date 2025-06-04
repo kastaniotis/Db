@@ -46,4 +46,104 @@ readonly class DatabaseConnection {
 
         return $statement->rowCount();
     }
+
+    public function getOne(string $sql, array $parameters = [], array $types = []): array
+    {
+        $result = $this->runFetchOne($sql, $parameters, $types);
+    
+        if ($result === null) {
+            throw new NoResultException();
+        }
+    
+        return $result;
+    }
+
+    public function getOptionalOne(string $sql, array $parameters = [], array $types = []): ?array
+    {
+        return $this->runFetchOne($sql, $parameters, $types);
+    }
+
+    private function runFetchOne(string $sql, array $parameters, array $types): ?array
+    {
+        try {
+            $statement = $this->pdo->prepare($sql);
+    
+            if (!empty($types)) {
+                foreach ($parameters as $i => $value) {
+                    $type = $types[$i] ?? PDO::PARAM_STR;
+                    $statement->bindValue($i + 1, $value, $type);
+                }
+                $statement->execute();
+            } else {
+                $statement->execute($parameters);
+            }
+    
+            $result = $statement->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            $this->logger->error("Database error: " . $e->getMessage(), ['sql' => $sql, 'parameters' => $parameters]);
+            throw new DatabaseException($e);
+        }
+    
+        $count = count($result);
+        if ($count === 0) {
+            return null;
+        }
+    
+        if ($count > 1) {
+            $this->logger->error("Too many results for query expecting one", ['sql' => $sql, 'parameters' => $parameters]);
+            throw new TooManyResultsException();
+        }
+    
+        return $result[0];
+    }
+
+    public function getMany(string $sql, array $parameters = [], array $types = []): array
+    {
+        try {
+            $statement = $this->pdo->prepare($sql);
+    
+            if (!empty($types)) {
+                foreach ($parameters as $i => $value) {
+                    $type = $types[$i] ?? PDO::PARAM_STR;
+                    $statement->bindValue($i + 1, $value, $type);
+                }
+                $statement->execute();
+            } else {
+                $statement->execute($parameters);
+            }
+    
+            return $statement->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            $this->logger->error("Database error: " . $e->getMessage(), [
+                'sql' => $sql,
+                'parameters' => $parameters
+            ]);
+            throw new DatabaseException($e);
+        }
+    }
+
+    public function getScalar(string $sql, array $parameters = []): mixed
+    {
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($parameters);
+            return $stmt->fetchColumn();
+        } catch (\Throwable $e) {
+            $this->logger->error("Database error: " . $e->getMessage(), ['sql' => $sql]);
+            throw new DatabaseException($e);
+        }
+    }
+
+    public function transaction(callable $fn): mixed
+    {
+        try {
+            $this->pdo->beginTransaction();
+            $result = $fn($this);
+            $this->pdo->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
 }
