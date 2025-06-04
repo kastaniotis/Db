@@ -1,0 +1,19 @@
+{
+    "name": "iconic/db",
+    "description": "Think PDO wrapper",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Iconic\\Db\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Dimitris Kastaniotis",
+            "email": "d.kastaniotis@iconic.gr"
+        }
+    ],
+    "require": {"ext-pdo": "*",
+        "psr/log": "^3.0"}
+}
