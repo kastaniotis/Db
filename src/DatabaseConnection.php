@@ -3,34 +3,37 @@
 namespace Iconic\Db;
 
 use PDO;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 readonly class DatabaseConnection {
     private PDO $pdo;
+    private LoggerInterface $logger;
 
-    public function __construct(string $dsn, string $user, string $pass) {
-        $this->pdo = new PDO($dsn, $user, $pass);
+    public function __construct(PDO $pdo, LoggerInterface $logger) {
+        $this->pdo = $pdo;
+        $this->logger = $logger;
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
-    public static function createMysql(string $host, string $dbname, string $user, string $pass): self
+    public static function createMysql(string $host, string $dbname, string $user, string $pass, LoggerInterface $logger): self
     {
         $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
         $pdo = new PDO($dsn, $user, $pass);
-        return new self($pdo);
+        return new self($pdo, $logger);
     }
 
-    public static function createSqlite(string $path): self
+    public static function createSqlite(string $path, LoggerInterface $logger): self
     {
         $dsn = "sqlite:$path";
         $pdo = new PDO($dsn);
-        return new self($pdo);
+        return new self($pdo, $logger);
     }
 
     public function query(string $sql, array $parameters = []): array
     {
         $statement = $this->pdo->prepare($sql);
         $statement->execute($parameters);
-
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -39,7 +42,6 @@ readonly class DatabaseConnection {
         $statement = $this->pdo->prepare($sql);
         $statement->execute($parameters);
 
-        // Simple detection of INSERT
         if (stripos(trim($sql), 'insert') === 0) {
             return (int) $this->pdo->lastInsertId();
         }
@@ -50,11 +52,9 @@ readonly class DatabaseConnection {
     public function getOne(string $sql, array $parameters = [], array $types = []): array
     {
         $result = $this->runFetchOne($sql, $parameters, $types);
-    
         if ($result === null) {
             throw new NoResultException();
         }
-    
         return $result;
     }
 
@@ -67,33 +67,35 @@ readonly class DatabaseConnection {
     {
         try {
             $statement = $this->pdo->prepare($sql);
-    
             if (!empty($types)) {
-                foreach ($parameters as $i => $value) {
-                    $type = $types[$i] ?? PDO::PARAM_STR;
-                    $statement->bindValue($i + 1, $value, $type);
-                }
+                $this->bindParameters($statement, $parameters, $types);
                 $statement->execute();
             } else {
                 $statement->execute($parameters);
             }
-    
+
             $result = $statement->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\Throwable $e) {
-            $this->logger->error("Database error: " . $e->getMessage(), ['sql' => $sql, 'parameters' => $parameters]);
+        } catch (Throwable $e) {
+            $this->logger->error("Database error: " . $e->getMessage(), [
+                'sql' => $sql,
+                'parameters' => $parameters
+            ]);
             throw new DatabaseException($e);
         }
-    
+
         $count = count($result);
         if ($count === 0) {
             return null;
         }
-    
+
         if ($count > 1) {
-            $this->logger->error("Too many results for query expecting one", ['sql' => $sql, 'parameters' => $parameters]);
+            $this->logger->error("Too many results for query expecting one", [
+                'sql' => $sql,
+                'parameters' => $parameters
+            ]);
             throw new TooManyResultsException();
         }
-    
+
         return $result[0];
     }
 
@@ -101,19 +103,15 @@ readonly class DatabaseConnection {
     {
         try {
             $statement = $this->pdo->prepare($sql);
-    
             if (!empty($types)) {
-                foreach ($parameters as $i => $value) {
-                    $type = $types[$i] ?? PDO::PARAM_STR;
-                    $statement->bindValue($i + 1, $value, $type);
-                }
+                $this->bindParameters($statement, $parameters, $types);
                 $statement->execute();
             } else {
                 $statement->execute($parameters);
             }
-    
+
             return $statement->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->logger->error("Database error: " . $e->getMessage(), [
                 'sql' => $sql,
                 'parameters' => $parameters
@@ -128,8 +126,11 @@ readonly class DatabaseConnection {
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($parameters);
             return $stmt->fetchColumn();
-        } catch (\Throwable $e) {
-            $this->logger->error("Database error: " . $e->getMessage(), ['sql' => $sql]);
+        } catch (Throwable $e) {
+            $this->logger->error("Database error: " . $e->getMessage(), [
+                'sql' => $sql,
+                'parameters' => $parameters
+            ]);
             throw new DatabaseException($e);
         }
     }
@@ -141,9 +142,22 @@ readonly class DatabaseConnection {
             $result = $fn($this);
             $this->pdo->commit();
             return $result;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->pdo->rollBack();
             throw $e;
         }
+    }
+
+    private function bindParameters(\PDOStatement $statement, array $parameters, array $types): void
+    {
+        foreach ($parameters as $i => $value) {
+            $type = $types[$i] ?? PDO::PARAM_STR;
+            $statement->bindValue($i + 1, $value, $type);
+        }
+    }
+
+    public function getConnection(): PDO
+    {
+        return $this->pdo;
     }
 }
