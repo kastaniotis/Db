@@ -11,7 +11,7 @@ class DbTest extends TestCase
 
     public function setUp(): void
     {
-        $this->db = DatabaseConnection::createSqlite(':memory:', new NullLogger());
+        $this->db = DatabaseConnection::connectToSqlite(':memory:', new NullLogger());
         $this->db->execute('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)');
         $this->db->execute('INSERT INTO users (name) VALUES (:name)', ['name' => 'Alice']);
     }

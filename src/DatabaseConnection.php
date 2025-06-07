@@ -6,7 +6,6 @@ use Iconic\Db\Exception\DatabaseException;
 use Iconic\Db\Exception\NoResultException;
 use Iconic\Db\Exception\TooManyResultsException;
 use PDO;
-use PDOStatement;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -22,14 +21,21 @@ readonly class DatabaseConnection
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
-    public static function createMysql(string $host, string $dbname, string $user, string $pass, LoggerInterface $logger): self
+    public static function connectToMysqlHost(string $host, string $dbname, string $user, string $pass, LoggerInterface $logger): self
     {
         $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
         $pdo = new PDO($dsn, $user, $pass);
         return new self($pdo, $logger);
     }
 
-    public static function createSqlite(string $path, LoggerInterface $logger): self
+    public static function connectToMysqlSocket(string $socket, string $dbname, string $user, string $pass, LoggerInterface $logger): self
+    {
+        $dsn = "mysql:unix_socket=$socket;dbname=$dbname;charset=utf8mb4";
+        $pdo = new PDO($dsn, $user, $pass);
+        return new self($pdo, $logger);
+    }
+
+    public static function connectToSqlite(string $path, LoggerInterface $logger): self
     {
         $dsn = "sqlite:$path";
         $pdo = new PDO($dsn);
@@ -55,6 +61,9 @@ readonly class DatabaseConnection
         return $statement->rowCount();
     }
 
+    /**
+     * @throws NoResultException
+     */
     public function getOne(string $sql, array $parameters = []): array
     {
         $result = $this->runFetchOne($sql, $parameters);
@@ -131,6 +140,9 @@ readonly class DatabaseConnection
         }
     }
 
+    /**
+     * @throws Throwable
+     */
     public function transaction(callable $fn): mixed
     {
         try {
