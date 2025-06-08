@@ -75,7 +75,7 @@ readonly class DatabaseConnection
     /**
      * @param string $sql
      * @param array<string, mixed> $parameters
-     * @return array<int, mixed>
+     * @return array<string, mixed>
      * @throws NoResultException
      */
     public function getOne(string $sql, array $parameters = []): array
