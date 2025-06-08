@@ -262,4 +262,26 @@ readonly class DatabaseConnection
 
         return $this->execute($sql, $parameters);
     }
+
+    /**
+     * @param string $table
+     * @param array<string, mixed> $criteria
+     * @return int
+     */
+    public function delete(string $table, array $criteria): int
+    {
+        $sql = "DELETE FROM $table WHERE ";
+        foreach ($criteria as $column => $value) {
+            $sql .= "$column = :$column AND ";
+        }
+
+        $sql = substr($sql, 0, -4);
+
+        $parameters = [];
+        foreach ($criteria as $column => $value) {
+            $parameters[":$column"] = $value;
+        }
+
+        return $this->execute($sql, $parameters);
+    }
 }

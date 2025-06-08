@@ -119,4 +119,14 @@ class DbTest extends TestCase
         $this->assertEquals(3, $updatedAddress['number']);
         $this->assertEquals($updated, $updatedAddress['created']);
     }
+
+    public function testDelete()
+    {
+        $result = $this->db->delete('addresses',['id' => 1]);
+        $this->assertEquals(1, $result);
+
+        $count = $this->db->getColumn("SELECT COUNT(*) FROM addresses", []);
+
+        $this->assertEquals(0, $count);
+    }
 }
