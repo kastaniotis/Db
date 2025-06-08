@@ -2,6 +2,7 @@
 
 namespace Iconic\Db;
 
+use Exception;
 use Iconic\Db\Exception\DatabaseException;
 use Iconic\Db\Exception\NoResultException;
 use Iconic\Db\Exception\TooManyResultsException;
@@ -42,6 +43,11 @@ readonly class DatabaseConnection
         return new self($pdo, $logger);
     }
 
+    /**
+     * @param string $sql
+     * @param array<string, mixed> $parameters
+     * @return array<array<string, mixed>>
+     */
     public function query(string $sql, array $parameters = []): array
     {
         $statement = $this->pdo->prepare($sql);
@@ -49,6 +55,11 @@ readonly class DatabaseConnection
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /**
+     * @param string $sql
+     * @param array<string, mixed> $parameters
+     * @return int
+     */
     public function execute(string $sql, array $parameters = []): int
     {
         $statement = $this->pdo->prepare($sql);
@@ -62,6 +73,9 @@ readonly class DatabaseConnection
     }
 
     /**
+     * @param string $sql
+     * @param array<string, mixed> $parameters
+     * @return array<int, mixed>
      * @throws NoResultException
      */
     public function getOne(string $sql, array $parameters = []): array
@@ -73,11 +87,21 @@ readonly class DatabaseConnection
         return $result;
     }
 
+    /**
+     * @param string $sql
+     * @param array<string, mixed> $parameters
+     * @return array<string,mixed>|null
+     */
     public function getOptionalOne(string $sql, array $parameters = []): ?array
     {
         return $this->runFetchOne($sql, $parameters);
     }
 
+    /**
+     * @param string $sql
+     * @param array<string, mixed> $parameters
+     * @return array<array<string, mixed>>|null
+     */
     private function runFetchOne(string $sql, array $parameters): ?array
     {
         try {
@@ -85,7 +109,7 @@ readonly class DatabaseConnection
             $statement->execute($parameters);
 
             $result = $statement->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Throwable $e) {
+        } catch (Exception $e) {
             $this->logger->error("Database error: " . $e->getMessage(), [
                 'sql' => $sql,
                 'parameters' => $parameters
@@ -109,6 +133,11 @@ readonly class DatabaseConnection
         return $result[0];
     }
 
+    /**
+     * @param string $sql
+     * @param array<string, mixed> $parameters
+     * @return array<array<string, mixed>>
+     */
     public function getMany(string $sql, array $parameters = []): array
     {
         try {
@@ -116,7 +145,7 @@ readonly class DatabaseConnection
             $statement->execute($parameters);
 
             return $statement->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Throwable $e) {
+        } catch (Exception $e) {
             $this->logger->error("Database error: " . $e->getMessage(), [
                 'sql' => $sql,
                 'parameters' => $parameters
@@ -125,13 +154,18 @@ readonly class DatabaseConnection
         }
     }
 
+    /**
+     * @param string $sql
+     * @param array<string, mixed> $parameters
+     * @return mixed
+     */
     public function getColumn(string $sql, array $parameters = []): mixed
     {
         try {
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($parameters);
             return $stmt->fetchColumn();
-        } catch (Throwable $e) {
+        } catch (Exception $e) {
             $this->logger->error("Database error: " . $e->getMessage(), [
                 'sql' => $sql,
                 'parameters' => $parameters
@@ -159,5 +193,73 @@ readonly class DatabaseConnection
     public function getConnection(): PDO
     {
         return $this->pdo;
+    }
+
+    /**
+     * @param string $table
+     * @param array<string, mixed> $data
+     * @return int
+     */
+    public function insert(string $table, array $data): int
+    {
+        $sql = "INSERT INTO $table (";
+
+        foreach ($data as $column => $value) {
+            $sql .= "$column, ";
+        }
+
+        $sql =  substr($sql, 0, -2);
+
+        $sql .= ") VALUES (";
+
+        foreach ($data as $column => $value) {
+            $sql .= ":$column, ";
+        }
+
+        $sql = substr($sql, 0, -2);
+
+        $sql .= ")";
+
+        $insertData = [];
+        foreach ($data as $column => $value) {
+            $insertData[":$column"] = $value;
+        }
+
+        return $this->execute($sql, $insertData);
+    }
+
+    /**
+     * @param string $table
+     * @param array<string, mixed> $data
+     * @param array<string, mixed> $criteria
+     * @return int
+     */
+    public function update(string $table, array $data, array $criteria): int
+    {
+        $sql = "UPDATE $table SET ";
+
+        foreach ($data as $column => $value) {
+            $sql .= "$column = :$column, ";
+        }
+
+        $sql = substr($sql, 0, -2);
+
+        $sql .= " WHERE ";
+
+        foreach ($criteria as $column => $value) {
+            $sql .= "$column = :$column AND ";
+        }
+
+        $sql = substr($sql, 0, -4);
+
+        $parameters = [];
+        foreach ($data as $column => $value) {
+            $parameters[":$column"] = $value;
+        }
+        foreach ($criteria as $column => $value) {
+            $parameters[":$column"] = $value;
+        }
+
+        return $this->execute($sql, $parameters);
     }
 }
