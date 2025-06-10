@@ -246,7 +246,7 @@ readonly class DatabaseConnection
         $sql = "UPDATE $table SET ";
 
         foreach ($data as $column => $value) {
-            $sql .= "$column = :d-$column, ";
+            $sql .= "$column = :d_$column, ";
         }
 
         $sql = substr($sql, 0, -2);
@@ -254,17 +254,17 @@ readonly class DatabaseConnection
         $sql .= " WHERE ";
 
         foreach ($criteria as $column => $value) {
-            $sql .= "$column = :c-$column AND ";
+            $sql .= "$column = :c_$column AND ";
         }
 
         $sql = substr($sql, 0, -4);
 
         $parameters = [];
         foreach ($data as $column => $value) {
-            $parameters[":d-$column"] = $value;
+            $parameters[":d_$column"] = $value;
         }
         foreach ($criteria as $column => $value) {
-            $parameters[":c-$column"] = $value;
+            $parameters[":c_$column"] = $value;
         }
 
         return ['sql' =>  $sql, 'parameters' => $parameters];
