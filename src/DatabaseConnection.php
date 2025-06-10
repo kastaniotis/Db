@@ -284,4 +284,22 @@ readonly class DatabaseConnection
 
         return $this->execute($sql, $parameters);
     }
+
+    public function select(string $table, array $criteria): array
+    {
+        $sql = "SELECT * FROM $table WHERE ";
+
+        foreach ($criteria as $column => $value) {
+            $sql .= "$column = :$column AND ";
+        }
+
+        $sql = substr($sql, 0, -4);
+
+        $parameters = [];
+        foreach ($criteria as $column => $value) {
+            $parameters[":$column"] = $value;
+        }
+
+        return $this->getMany($sql, $parameters);
+    }
 }

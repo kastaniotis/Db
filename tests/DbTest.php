@@ -129,4 +129,11 @@ class DbTest extends TestCase
 
         $this->assertEquals(0, $count);
     }
+
+    public function testSelect()
+    {
+        $result = $this->db->select('users', ['id' => 1]);
+
+        $this->assertEquals($result[0]['name'], 'Alice');
+    }
 }
