@@ -236,6 +236,13 @@ readonly class DatabaseConnection
      */
     public function update(string $table, array $data, array $criteria): int
     {
+        $preparation = $this->prepareUpdate($table, $data, $criteria);
+
+        return $this->execute($preparation['sql'], $preparation['parameterss']);
+    }
+
+    public function prepareUpdate(string $table, array $data, array $criteria): array
+    {
         $sql = "UPDATE $table SET ";
 
         foreach ($data as $column => $value) {
@@ -260,7 +267,7 @@ readonly class DatabaseConnection
             $parameters[":$column"] = $value;
         }
 
-        return $this->execute($sql, $parameters);
+        return ['sql' =>  $sql, 'parameters' => $parameters];
     }
 
     /**
