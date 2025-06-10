@@ -238,7 +238,7 @@ readonly class DatabaseConnection
     {
         $preparation = $this->prepareUpdate($table, $data, $criteria);
 
-        return $this->execute($preparation['sql'], $preparation['parameterss']);
+        return $this->execute($preparation['sql'], $preparation['parameters']);
     }
 
     public function prepareUpdate(string $table, array $data, array $criteria): array
