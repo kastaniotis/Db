@@ -136,4 +136,52 @@ class DbTest extends TestCase
 
         $this->assertEquals($result[0]['name'], 'Alice');
     }
+
+    public function testGetManyWithIn()
+    {
+        $result = $this->db->getMany("SELECT * FROM users WHERE id IN (:ids)", ['ids' => [1, 2, 3]]);
+        $this->assertEquals($result[0]['name'], 'Alice');
+    }
+
+    public function testSelectWithIn()
+    {
+        $result = $this->db->select('users', ['id' => [1, 2, 3]]);
+        $this->assertEquals($result[0]['name'], 'Alice');
+    }
+
+    public function testQueryWithIn()
+    {
+        $result = $this->db->query('SELECT * FROM users WHERE id IN (:ids)', ['ids' => [1, 2, 3]]);
+        $this->assertEquals($result[0]['name'], 'Alice');
+    }
+
+    public function testExecuteWithIn()
+    {
+        $result = $this->db->execute("UPDATE users SET name = 'test' WHERE id IN (:ids)", ['ids' => [1, 2, 3]]);
+        $this->assertEquals($result, 1);
+    }
+
+    public function testGetOneWithIn()
+    {
+        $result = $this->db->getOne("SELECT * FROM users WHERE id IN (:id)", ['id' => [1,2,3]]);
+        $this->assertEquals($result['name'], 'Alice');
+    }
+
+    public function testGetColumnWithIn()
+    {
+        $result = $this->db->getColumn("SELECT name FROM users WHERE id IN (:id)", ['id' => [1,2,3]]);
+        $this->assertEquals($result, 'Alice');
+    }
+
+    public function testUpdateWithIn()
+    {
+        $result = $this->db->update('users', ['name' => 'test'], ['id' => [1, 2, 3]]);
+        $this->assertEquals($result, 1);
+    }
+
+    public function testDeleteWithIn()
+    {
+        $result = $this->db->delete('users', ['id' => [1, 2, 3]]);
+        $this->assertEquals(1, $result);
+    }
 }

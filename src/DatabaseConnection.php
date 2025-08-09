@@ -50,6 +50,7 @@ readonly class DatabaseConnection
      */
     public function query(string $sql, array $parameters = []): array
     {
+        list($sql, $parameters) = $this->expandArrayParams($sql, $parameters);
         $statement = $this->pdo->prepare($sql);
         $statement->execute($parameters);
         return $statement->fetchAll(PDO::FETCH_ASSOC);
@@ -62,6 +63,7 @@ readonly class DatabaseConnection
      */
     public function execute(string $sql, array $parameters = []): int
     {
+        list($sql, $parameters) = $this->expandArrayParams($sql, $parameters);
         $statement = $this->pdo->prepare($sql);
         $statement->execute($parameters);
 
@@ -105,6 +107,7 @@ readonly class DatabaseConnection
     private function runFetchOne(string $sql, array $parameters): ?array
     {
         try {
+            list($sql, $parameters) = $this->expandArrayParams($sql, $parameters);
             $statement = $this->pdo->prepare($sql);
             $statement->execute($parameters);
 
@@ -141,6 +144,7 @@ readonly class DatabaseConnection
     public function getMany(string $sql, array $parameters = []): array
     {
         try {
+            list($sql, $parameters) = $this->expandArrayParams($sql, $parameters);
             $statement = $this->pdo->prepare($sql);
             $statement->execute($parameters);
 
@@ -162,6 +166,7 @@ readonly class DatabaseConnection
     public function getColumn(string $sql, array $parameters = []): mixed
     {
         try {
+            list($sql, $parameters) = $this->expandArrayParams($sql, $parameters);
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($parameters);
             return $stmt->fetchColumn();
@@ -237,7 +242,6 @@ readonly class DatabaseConnection
     public function update(string $table, array $data, array $criteria): int
     {
         $preparation = $this->prepareUpdate($table, $data, $criteria);
-
         return $this->execute($preparation['sql'], $preparation['parameters']);
     }
 
@@ -254,17 +258,22 @@ readonly class DatabaseConnection
         $sql .= " WHERE ";
 
         foreach ($criteria as $column => $value) {
-            $sql .= "$column = :c_$column AND ";
+            if(is_array($value)) {
+                $sql .= "$column IN (:c_$column) AND ";
+            }
+            else {
+                $sql .= "$column = :c_$column AND ";
+            }
         }
 
         $sql = substr($sql, 0, -4);
 
         $parameters = [];
         foreach ($data as $column => $value) {
-            $parameters[":d_$column"] = $value;
+            $parameters["d_$column"] = $value;
         }
         foreach ($criteria as $column => $value) {
-            $parameters[":c_$column"] = $value;
+            $parameters["c_$column"] = $value;
         }
 
         return ['sql' =>  $sql, 'parameters' => $parameters];
@@ -279,14 +288,19 @@ readonly class DatabaseConnection
     {
         $sql = "DELETE FROM $table WHERE ";
         foreach ($criteria as $column => $value) {
-            $sql .= "$column = :$column AND ";
+            if(is_array($value)) {
+                $sql .= "$column IN (:$column) AND ";
+            }
+            else {
+                $sql .= "$column = :$column AND ";
+            }
         }
 
         $sql = substr($sql, 0, -4);
 
         $parameters = [];
         foreach ($criteria as $column => $value) {
-            $parameters[":$column"] = $value;
+            $parameters["$column"] = $value;
         }
 
         return $this->execute($sql, $parameters);
@@ -297,16 +311,65 @@ readonly class DatabaseConnection
         $sql = "SELECT * FROM $table WHERE ";
 
         foreach ($criteria as $column => $value) {
-            $sql .= "$column = :$column AND ";
+            if(is_array($value)) {
+                $sql .= "$column IN (:$column) AND ";
+            }
+            else {
+                $sql .= "$column = :$column AND ";
+            }
         }
 
         $sql = substr($sql, 0, -4);
 
         $parameters = [];
         foreach ($criteria as $column => $value) {
-            $parameters[":$column"] = $value;
+            $parameters["$column"] = $value;
         }
 
         return $this->getMany($sql, $parameters);
     }
+
+    /**
+     * Expands array parameters into multiple PDO placeholders for IN() clauses.
+     *
+     * Example:
+     *   $sql = "SELECT * FROM table WHERE id IN (:ids)";
+     *   $params = ['ids' => [1, 2, 3]];
+     *   list($sql, $params) = $this->expandArrayParams($sql, $params);
+     *
+     * Result:
+     *   $sql    = "SELECT * FROM table WHERE id IN (:ids_0, :ids_1, :ids_2)"
+     *   $params = ['ids_0' => 1, 'ids_1' => 2, 'ids_2' => 3]
+     *
+     * @param string $sql
+     * @param array  $params
+     * @return array [$sql, $params]
+     */
+    private function expandArrayParams(string $sql, array $params): array
+    {
+        foreach ($params as $name => $value) {
+            if (is_array($value)) {
+                $value = array_values($value); // reindex from 0
+                $placeholders = [];
+
+                foreach ($value as $i => $val) {
+                    $ph = "{$name}_{$i}";
+                    $placeholders[] = ':' . $ph;
+                    $params[$ph] = $val;
+                }
+
+                // Replace :name with the expanded list
+                $sql = preg_replace(
+                    '/:' . preg_quote($name, '/') . '\b/',
+                    implode(', ', $placeholders),
+                    $sql
+                );
+
+                unset($params[$name]); // remove original array key
+            }
+        }
+
+        return [$sql, $params];
+    }
+
 }
